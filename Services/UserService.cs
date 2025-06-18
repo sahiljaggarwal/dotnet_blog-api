@@ -4,8 +4,6 @@ using BlogPortal.Dtos;
 using BlogPortal.Models;
 using BlogPortal.Repositories;
 using BlogPortal.Shared;
-using Microsoft.AspNetCore.Http.HttpResults;
-using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Claims;
 
@@ -22,7 +20,7 @@ namespace BlogPortal.Services
             _config = config;
         }
 
-        public async Task<ApiResponse<object>> SignUp(SignUpDto dto)
+        public async Task<ApiResponse<object>> SignUpAsync(SignUpDto dto)
         {
             var existing = await _userRepo.FindByEmail(dto.Email);
             if (existing != null)
@@ -34,14 +32,13 @@ namespace BlogPortal.Services
                 Username = dto.Username,
                 Email = dto.Email,
                 Password = dto.Password,
-                Role = Enum.TryParse<Role>(dto.Role, out var role) ? role : Role.READER
             };
 
             await _userRepo.Create(user);
-            return new ApiResponse<object>(true, "SignUp Successfull", new { user.Id, user.Email, user.Username, user.Role });
+            return new ApiResponse<object>(true, "SignUp Successfull", new { user.Id, user.Email, user.Username });
         }
 
-        public async Task<ApiResponse<List<UserResponseDto>>> GetAllUsers(QueryUserDto query)
+        public async Task<ApiResponse<List<UserResponseDto>>> GetAllUsersAsync(QueryUserDto query)
         {
             var users = await _userRepo.FindMany(query);
             var total = await _userRepo.CountUsers(query.Search);
@@ -54,7 +51,6 @@ namespace BlogPortal.Services
                 Id = u.Id,
                 Email = u.Email,
                 Username = u.Username,
-                Role = u.Role.ToString()
             }).ToList();
             var totalPages = (int)Math.Ceiling((double)total / query.Limit);
 
@@ -85,7 +81,6 @@ namespace BlogPortal.Services
                 {
                     new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                     new Claim(ClaimTypes.Email, user.Email),
-                    new Claim(ClaimTypes.Role, user.Role.ToString())
                 }),
                 Expires = DateTime.UtcNow.AddDays(7),
                 SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
@@ -97,13 +92,6 @@ namespace BlogPortal.Services
             var data = new
             {
                 token = tokenString,
-                user = new
-                {
-                    user.Id,
-                    user.Email,
-                    user.Username,
-                    Role = user.Role.ToString()
-                }
             };
 
             return new ApiResponse<object>(true, "Login successfull", data);

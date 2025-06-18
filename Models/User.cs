@@ -16,10 +16,5 @@ namespace BlogPortal.Models
         [Required]
         public string Password { get; set; } = string.Empty;
 
-        [Required]
-        public Role Role { get; set; }
-
-        
-
     }
 }

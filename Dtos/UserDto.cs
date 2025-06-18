@@ -5,7 +5,6 @@ namespace BlogPortal.Dtos
         public string Username { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
         public string Password { get; set; } = string.Empty;
-        public string Role { get; set; } = "READER";
     }
 
     public class LoginDto
@@ -19,7 +18,6 @@ namespace BlogPortal.Dtos
         public int Id { get; set; }
         public string Username { get; set; } = string.Empty;
         public string Email { get; set; } = string.Empty;
-        public string Role { get; set; } = string.Empty;
     }
 
     public class QueryUserDto

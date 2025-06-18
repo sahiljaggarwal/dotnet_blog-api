@@ -8,6 +8,7 @@ namespace BlogPortal.Data
         public ApplicationDbContext(DbContextOptions options) : base(options) { }
 
         public DbSet<User> Users => Set<User>();
+        public DbSet<Blog> Blogs => Set<Blog>();
 
         public override int SaveChanges()
         {

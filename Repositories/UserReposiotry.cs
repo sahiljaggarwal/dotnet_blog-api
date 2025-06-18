@@ -2,7 +2,6 @@
 using BlogPortal.Data;
 using BlogPortal.Dtos;
 using BlogPortal.Models;
-using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
 namespace BlogPortal.Repositories

@@ -23,19 +23,59 @@ builder.Services.AddAuthentication(options =>
     var jwtSettings = builder.Configuration.GetSection("Jwt");
     options.TokenValidationParameters = new TokenValidationParameters
     {
-        ValidateIssuer = true,
-        ValidateAudience = true,
+        ValidateIssuer = false,
+        ValidateAudience = false,
         ValidateLifetime = true,
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!)),
+        // RoleClaimType = "role"
+    };
+
+    options.Events = new JwtBearerEvents
+    {
+        OnMessageReceived = context =>
+{
+    // Authorization header
+    if (context.Request.Headers.TryGetValue("Authorization", out var authHeader) &&
+        authHeader.ToString().StartsWith("Bearer "))
+    {
+        context.Token = authHeader.ToString().Substring("Bearer ".Length).Trim();
+        Console.WriteLine("context.Token " + context.Token);
+    }
+
+    // Cookie
+    else if (context.Request.Cookies.TryGetValue("token", out var tokenFromCookie))
+    {
+        context.Token = tokenFromCookie;
+    }
+
+    return Task.CompletedTask;
+},
+        OnChallenge = context =>
+        {
+            context.HandleResponse();
+            context.Response.StatusCode = 401;
+            context.Response.ContentType = "application/json";
+
+            var apiResponse = new BlogPortal.Shared.ApiResponse<object>(false, "No token provided or token is invalid.", null, new
+            {
+                timestamp = DateTime.UtcNow,
+                path = context.Request.Path.Value
+            });
+            var result = System.Text.Json.JsonSerializer.Serialize(apiResponse);
+            return context.Response.WriteAsync(result);
+        }
     };
 });
 
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<UserService>();
+
+builder.Services.AddScoped<BlogService>();
+builder.Services.AddScoped<BlogRepository>();
 
 
 builder.Services.AddEndpointsApiExplorer();
@@ -53,6 +93,12 @@ if (app.Environment.IsDevelopment() || app.Environment.IsStaging() || app.Enviro
         options.RoutePrefix = "docs";
     });
 }
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapControllers();
+
+
 app.MapGet("/", () => Results.Ok("🚀 Welcome to BlogPortal API! Use /api/v1/... for API access."));
 app.Run();

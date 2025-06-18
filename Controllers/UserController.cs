@@ -6,11 +6,10 @@ using Microsoft.AspNetCore.Mvc;
 namespace BlogPortal.Controllers
 {
     [ApiController]
-    [Route("users")]
+    [Route("api/users")]
     public class UserController : ControllerBase
     {
         private readonly UserService _userService;
-        private readonly IConfiguration _config;
 
         public UserController(UserService service)
         {
@@ -18,42 +17,32 @@ namespace BlogPortal.Controllers
 
         }
 
-
+        // Signup Users Controller
         [HttpPost("signup")]
         public async Task<IActionResult> SignUp(SignUpDto dto)
         {
-            var result = await _userService.SignUp(dto);
+            var result = await _userService.SignUpAsync(dto);
             return result.Success ? Ok(result) : BadRequest(result);
         }
 
+        // Find All Users Controller
         [HttpGet]
         public async Task<IActionResult> FindAllUsers([FromQuery] QueryUserDto query)
         {
-            var result = await _userService.GetAllUsers(query);
+            var result = await _userService.GetAllUsersAsync(query);
             return result.Success ? Ok(result) : NotFound(result);
 
         }
 
+        // Login User Controller
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginDto dto)
         {
             var result = await _userService.Login(dto);
-
-            if (!result.Success)
+            if (!result.Success || result.Data == null)
             {
                 return Unauthorized(result);
             }
-
-            var token = ((dynamic)result.Data).token;
-
-            Response.Cookies.Append("token", token, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = false,
-                SameSite = SameSiteMode.Strict,
-                Expires = DateTime.UtcNow.AddDays(7)
-            });
-
             return Ok(result);
         }
     }

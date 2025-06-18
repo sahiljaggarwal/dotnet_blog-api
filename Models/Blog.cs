@@ -1,9 +1,8 @@
 using System.ComponentModel.DataAnnotations;
-using System.ComponentModel.DataAnnotations.Schema;
 
 namespace BlogPortal.Models
 {
-    public class Blog
+    public class Blog: BaseEntity
     {
         public int Id { get; set; }
 
@@ -12,8 +11,6 @@ namespace BlogPortal.Models
 
         [Required]
         public string Content { get; set; } = string.Empty;
-
-        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
         public int AuthorId { get; set; }
 
