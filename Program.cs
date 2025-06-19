@@ -5,14 +5,17 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using BlogPortal.Repositories;
 using BlogPortal.Services;
+using BlogPortal.Filters;
+using BlogPortal.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
-
+// DB Connection
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+builder.Services.AddDbContext<ApplicationDbContext>(options =>
+    options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
 
-builder.Services.AddDbContext<ApplicationDbContext>(options => options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString)));
-
+// JWT Auth
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -29,30 +32,26 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         ValidIssuer = jwtSettings["Issuer"],
         ValidAudience = jwtSettings["Audience"],
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!)),
-        // RoleClaimType = "role"
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings["Key"]!))
     };
 
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = context =>
-{
-    // Authorization header
-    if (context.Request.Headers.TryGetValue("Authorization", out var authHeader) &&
-        authHeader.ToString().StartsWith("Bearer "))
-    {
-        context.Token = authHeader.ToString().Substring("Bearer ".Length).Trim();
-        Console.WriteLine("context.Token " + context.Token);
-    }
+        {
+            if (context.Request.Headers.TryGetValue("Authorization", out var authHeader) &&
+                authHeader.ToString().StartsWith("Bearer "))
+            {
+                context.Token = authHeader.ToString().Substring("Bearer ".Length).Trim();
+                Console.WriteLine("context.Token " + context.Token);
+            }
+            else if (context.Request.Cookies.TryGetValue("token", out var tokenFromCookie))
+            {
+                context.Token = tokenFromCookie;
+            }
 
-    // Cookie
-    else if (context.Request.Cookies.TryGetValue("token", out var tokenFromCookie))
-    {
-        context.Token = tokenFromCookie;
-    }
-
-    return Task.CompletedTask;
-},
+            return Task.CompletedTask;
+        },
         OnChallenge = context =>
         {
             context.HandleResponse();
@@ -70,20 +69,31 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+// Repositories & Services DI
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<UserRepository>();
 builder.Services.AddScoped<UserService>();
-
 builder.Services.AddScoped<BlogService>();
 builder.Services.AddScoped<BlogRepository>();
+builder.Services.AddScoped<MediaFileRepository>();
+builder.Services.AddScoped<FileService>();
 
+// Register Cloudinary settings
+builder.Services.Configure<CloudinarySettings>(
+builder.Configuration.GetSection("CloudinarySettings"));
+
+// ✅ Global Exception Filter registered
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<GlobalExceptionFilter>();
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddControllers();
-
 
 var app = builder.Build();
+
+// Swagger UI
 if (app.Environment.IsDevelopment() || app.Environment.IsStaging() || app.Environment.IsProduction())
 {
     app.UseSwagger();
@@ -94,11 +104,34 @@ if (app.Environment.IsDevelopment() || app.Environment.IsStaging() || app.Enviro
     });
 }
 
+app.Use(async (context, next) =>
+{
+    await next();
+
+    if (context.Response.StatusCode == StatusCodes.Status404NotFound &&
+        !context.Response.HasStarted)
+    {
+        context.Response.ContentType = "application/json";
+
+        var response = new
+        {
+            success = false,
+            message = "The requested resource was not found",
+            statusCode = 404,
+            timestamp = DateTime.UtcNow.ToString("o"),
+            path = context.Request.Path
+        };
+
+        var json = System.Text.Json.JsonSerializer.Serialize(response);
+        await context.Response.WriteAsync(json);
+    }
+});
+
+
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-
 app.MapGet("/", () => Results.Ok("🚀 Welcome to BlogPortal API! Use /api/v1/... for API access."));
+
 app.Run();

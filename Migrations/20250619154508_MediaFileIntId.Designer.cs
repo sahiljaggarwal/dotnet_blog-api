@@ -4,6 +4,7 @@ using BlogPortal.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace BlogPortal.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250619154508_MediaFileIntId")]
+    partial class MediaFileIntId
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -40,7 +43,10 @@ namespace BlogPortal.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<int?>("MediaFileId")
+                    b.Property<string>("MediaFileId")
+                        .HasColumnType("longtext");
+
+                    b.Property<int?>("MediaFileId1")
                         .HasColumnType("int");
 
                     b.Property<string>("Title")
@@ -54,7 +60,7 @@ namespace BlogPortal.Migrations
 
                     b.HasIndex("AuthorId");
 
-                    b.HasIndex("MediaFileId");
+                    b.HasIndex("MediaFileId1");
 
                     b.ToTable("Blogs");
                 });
@@ -141,7 +147,7 @@ namespace BlogPortal.Migrations
 
                     b.HasOne("BlogPortal.Models.MediaFile", "MediaFile")
                         .WithMany()
-                        .HasForeignKey("MediaFileId");
+                        .HasForeignKey("MediaFileId1");
 
                     b.Navigation("Author");
 

@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace BlogPortal.Models
 {
-    public class Blog: BaseEntity
+    public class Blog : BaseEntity
     {
         public int Id { get; set; }
 
@@ -15,5 +15,8 @@ namespace BlogPortal.Models
         public int AuthorId { get; set; }
 
         public User Author { get; set; } = null!;
+
+        public int? MediaFileId { get; set; }
+        public MediaFile? MediaFile { get; set; }
     }
 }

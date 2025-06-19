@@ -9,6 +9,7 @@ namespace BlogPortal.Data
 
         public DbSet<User> Users => Set<User>();
         public DbSet<Blog> Blogs => Set<Blog>();
+        public DbSet<MediaFile> MediaFiles => Set<MediaFile>();
 
         public override int SaveChanges()
         {

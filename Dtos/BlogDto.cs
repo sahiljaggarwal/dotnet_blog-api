@@ -9,6 +9,8 @@ namespace BlogPortal.Dtos
 
         [Required]
         public string Content { get; set; } = string.Empty;
+
+        public int? MediaFileId { get; set; }
     }
 
     public class QueryBlogDto

@@ -2,7 +2,6 @@ using BlogPortal.Dtos;
 using BlogPortal.Models;
 using BlogPortal.Repositories;
 using BlogPortal.Shared;
-using Microsoft.AspNetCore.Mvc;
 
 namespace BlogPortal.Services
 {
@@ -15,71 +14,65 @@ namespace BlogPortal.Services
             _blogRepo = blogRepo;
         }
 
-        // Add Blog Service
-        public async Task<ApiResponse<object>> CreateBlogAsync(CreateBlogDto dto, string userId)
+        public async Task<ApiResponse<object>> CreateBlogAsync(CreateBlogDto dto, int userId)
         {
             var blog = new Blog
             {
                 Title = dto.Title,
                 Content = dto.Content,
-                AuthorId = int.Parse(userId)
+                AuthorId = userId,
+                MediaFileId = dto.MediaFileId
             };
 
             await _blogRepo.CreateAsync(blog);
             return new ApiResponse<object>(true, "Blog created successfully", new { blog.Id });
         }
 
-        // Get User Blog Service
-        public async Task<ApiResponse<List<Blog>>> GetBlogsByUserAsync(string userId)
+        public async Task<ApiResponse<List<Blog>>> GetBlogsByUserAsync(int userId)
         {
-            if (userId == null)
-            {
-                return new ApiResponse<List<Blog>>(false, "UserId is required", null);
-            }
-            var blogs = await _blogRepo.FindByAuthorIdAsync(int.Parse(userId));
-            if (blogs == null || blogs.Count == 0)
-            {
+
+            var blogs = await _blogRepo.FindByAuthorIdAsync(userId);
+            if (blogs.Count == 0)
                 return new ApiResponse<List<Blog>>(false, "No blogs found for user");
-            }
 
             return new ApiResponse<List<Blog>>(true, "Blogs fetched successfully", blogs);
         }
 
-        // Get Users Blog Service
-        public async Task<ApiResponse<object>> GetAllBlogs([FromQuery] QueryBlogDto query)
+        public async Task<ApiResponse<object>> GetAllBlogs(QueryBlogDto query)
         {
             var blogs = await _blogRepo.FindMany(query);
             var total = await _blogRepo.CountBlogs(query?.Search);
-            if (blogs == null)
-            {
-                return new ApiResponse<object>(false, "User not found", null);
-            }
+
             var blogDtos = blogs.Select(b => new
             {
-                Id = b.Id,
-                Title = b.Title,
-                Content = b.Content,
-                Auther = new { id = b.Author.Id, username = b.Author.Username },
-                CreatedAt = b.CreatedAt,
-                UpdatedAt = b.UpdatedAt
+                b.Id,
+                b.Title,
+                b.Content,
+                Author = new { b.Author.Id, b.Author.Username },
+                MediaFile = b.MediaFile != null ? new { b.MediaFile.Id, b.MediaFile.Url } : null,
+                b.CreatedAt,
+                b.UpdatedAt
             }).ToList();
-            var totalPages = (int)Math.Ceiling((double)total / query.Limit);
+
+            var limit = query?.Limit ?? 10;
+            var skip = query?.Page ?? 1;
+            var totalPages = (int)Math.Ceiling((double)total / limit);
 
             var meta = new
             {
                 total,
                 totalPages,
-                currentPage = query.Page,
-                limit = query.Limit
+                currentPage = skip,
+                limit
             };
+
             return new ApiResponse<object>(true, "Blogs fetched successfully", blogDtos, meta);
         }
 
-        // Get Blog By Id Service
-        public async Task<ApiResponse<Blog>> GetBlogByIdAsync(int id, string userId)
+        public async Task<ApiResponse<Blog>> GetBlogByIdAsync(int id, int userId)
         {
             var blog = await _blogRepo.FindByIdAsync(id);
-            if (blog == null || blog.AuthorId != int.Parse(userId))
+            if (blog == null || blog.AuthorId != userId)
             {
                 return new ApiResponse<Blog>(false, "Blog not found or unauthorized");
             }
@@ -87,29 +80,28 @@ namespace BlogPortal.Services
             return new ApiResponse<Blog>(true, "Blog fetched successfully", blog);
         }
 
-        // Update Blog Service
-        public async Task<ApiResponse<object>> UpdateBlogAsync(int id, CreateBlogDto dto, string userId)
+        public async Task<ApiResponse<object>> UpdateBlogAsync(int id, CreateBlogDto dto, int userId)
         {
             var blog = await _blogRepo.FindByIdAsync(id);
-            if (blog == null || blog.AuthorId != int.Parse(userId))
+            if (blog == null || blog.AuthorId != userId)
             {
                 return new ApiResponse<object>(false, "Blog not found or unauthorized");
             }
 
             blog.Title = dto.Title;
             blog.Content = dto.Content;
+            blog.MediaFileId = dto.MediaFileId;
 
             await _blogRepo.UpdateAsync(blog);
             return new ApiResponse<object>(true, "Blog updated successfully");
         }
 
-        // Delete Blog Service
-        public async Task<ApiResponse<object>> DeleteBlogAsync(int id, string userId)
+        public async Task<ApiResponse<object>> DeleteBlogAsync(int id, int userId)
         {
             var blog = await _blogRepo.FindByIdAsync(id);
-            if (blog == null || blog.AuthorId != int.Parse(userId))
+            if (blog == null || blog.AuthorId != userId)
             {
-                return new ApiResponse<object>(false, "Blog not found");
+                return new ApiResponse<object>(false, "Blog not found or unauthorized");
             }
 
             await _blogRepo.DeleteAsync(blog);

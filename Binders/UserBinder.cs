@@ -17,7 +17,8 @@ namespace BlogPortal.Binders
             }
             var payload = new UserPayload
             {
-                Id = user.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+                // Id = user.FindFirst(ClaimTypes.NameIdentifier)?.Value,
+                Id = int.TryParse(user.FindFirst(ClaimTypes.NameIdentifier)?.Value, out var intId) ? intId : 0,
                 Email = user.FindFirst(ClaimTypes.Email)?.Value,
                 Nbf = long.TryParse(user.FindFirst("nbf")?.Value, out var nbfVal) ? nbfVal : 0,
                 Exp = long.TryParse(user.FindFirst("exp")?.Value, out var expVal) ? expVal : 0,
